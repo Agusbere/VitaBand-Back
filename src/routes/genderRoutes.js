@@ -1,9 +1,10 @@
 import express from 'express';
-import { getAllGenders, createGender } from '../controllers/genderController.js';
+import { getAllGenders, createGender, updateGender } from '../controllers/genderController.js';
 
 const router = express.Router();
 
-router.get('/genders', getAllGenders);
-router.post('/genders', createGender);
+router.get('/gender', getAllGenders);
+router.post('/gender', createGender);
+router.put('/gender/:id', updateGender);
 
 export default router;
