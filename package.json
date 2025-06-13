@@ -16,7 +16,7 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "node ./src/index.js"
+    "start": "nodemon ./src/index.js"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.50.0",
@@ -24,8 +24,10 @@
     "dotenv": "^16.5.0",
     "express": "^5.1.0",
     "http-status-codes": "^2.3.0",
-    "nodemon": "^3.1.10",
     "pg": "^8.16.0"
   },
-  "keywords": []
+  "keywords": [],
+  "devDependencies": {
+    "nodemon": "^3.1.10"
+  }
 }

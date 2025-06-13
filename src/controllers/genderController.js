@@ -1,39 +1,26 @@
-import supabase from "../supabaseClient.js";
+import pool from '../database/connection.js';
 
-export const getGenders = async (req, res) => {
-    const { data, error } = await supabase.from("gender").select("*");
-    if (error) return res.status(500).json({ error: error.message });
-    res.json(data);
-};
-
-export const getGenderById = async (req, res) => {
-    const { id } = req.params;
-    const { data, error } = await supabase.from("gender").select("*").eq("id", id).single();
-    if (error) return res.status(404).json({ error: "Género no encontrado" });
-    res.json(data);
+export const getAllGenders = async (req, res) => {
+    try {
+        const result = await pool.query('SELECT * FROM gender');
+        res.status(200).json(result.rows);
+    } catch (error) {
+        console.error('Error al obtener géneros:', error);
+        res.status(500).json({ error: 'Error interno del servidor' });
+    }
 };
 
 export const createGender = async (req, res) => {
     const { name } = req.body;
-    if (!name) return res.status(400).json({ error: "Falta el campo 'name'" });
 
-    const { data, error } = await supabase.from("gender").insert([{ name }]);
-    if (error) return res.status(500).json({ error: error.message });
-    res.status(201).json(data);
-};
-
-export const updateGender = async (req, res) => {
-    const { id } = req.params;
-    const { name } = req.body;
-
-    const { data, error } = await supabase.from("gender").update({ name }).eq("id", id);
-    if (error) return res.status(500).json({ error: error.message });
-    res.json(data);
-};
-
-export const deleteGender = async (req, res) => {
-    const { id } = req.params;
-    const { error } = await supabase.from("gender").delete().eq("id", id);
-    if (error) return res.status(500).json({ error: error.message });
-    res.status(204).send();
+    try {
+        const result = await pool.query(
+            'INSERT INTO gender (name) VALUES ($1) RETURNING *',
+            [name]
+        );
+        res.status(201).json(result.rows[0]);
+    } catch (error) {
+        console.error('Error al crear género:', error);
+        res.status(500).json({ error: 'Error interno del servidor' });
+    }
 };
