@@ -25,6 +25,7 @@ app.use('/api/color', colorRoutes);
 app.use('/api/relations', relationsRoutes);
 app.use('/api/rels', relsRoutes);
 
+
 app.listen(port, () => {
   console.log(`Servidor corriendo en http://localhost:${port}`);
 });
