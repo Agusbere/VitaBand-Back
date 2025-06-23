@@ -1,10 +1,11 @@
 import express from 'express';
-import { getAllRels, createRel, updateRel } from '../controllers/relsController.js';
+import { rels } from '../controllers/relsController.js';
 
 const router = express.Router();
 
-router.get('/rels', getAllRels);
-router.post('/rels', createRel);
-router.put('/rels/:id', updateRel);
+router.get('', rels.getAll);
+router.post('', rels.create);
+router.put('/:id', rels.update);
+router.delete('/:id', rels.delete);
 
 export default router;

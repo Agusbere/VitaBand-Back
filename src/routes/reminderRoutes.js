@@ -1,10 +1,11 @@
 import express from 'express';
-import { getAllReminders, createReminder, updateReminder } from '../controllers/reminderController.js';
+import { reminder } from '../controllers/reminderController.js';
 
 const router = express.Router();
 
-router.get('/reminder', getAllReminders);
-router.post('/reminder', createReminder);
-router.put('/reminder/:id', updateReminder);
+router.get('', reminder.getAll);
+router.post('', reminder.create);
+router.put('/:id', reminder.update);
+router.delete('/:id', reminder.delete);
 
 export default router;

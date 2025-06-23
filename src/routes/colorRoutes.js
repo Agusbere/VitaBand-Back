@@ -1,10 +1,11 @@
 import express from 'express';
-import { getAllColors, createColor, updateColor } from '../controllers/colorController.js';
+import { color } from '../controllers/colorController.js';
 
 const router = express.Router();
 
-router.get('/color', getAllColors);
-router.post('/color', createColor);
-router.put('/color/:id', updateColor);
+router.get('', color.getAll);
+router.post('', color.create);
+router.put('/:id', color.update);
+router.delete('/:id', color.delete);
 
 export default router;
