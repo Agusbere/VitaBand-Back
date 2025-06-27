@@ -9,6 +9,7 @@ import reminderRoutes from './routes/reminderRoutes.js';
 import colorRoutes from './routes/colorRoutes.js';
 import relationsRoutes from './routes/relationsRoutes.js';
 import relsRoutes from './routes/relsRoutes.js';
+import authRoutes from './routes/authRoutes.js';
 
 const app = express();
 const port = 3000;
@@ -24,6 +25,7 @@ app.use('/api/reminder', reminderRoutes);
 app.use('/api/color', colorRoutes);
 app.use('/api/relations', relationsRoutes);
 app.use('/api/rels', relsRoutes);
+app.use('/api/auth', authRoutes);
 
 
 app.listen(port, () => {
