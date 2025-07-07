@@ -20,7 +20,7 @@ export const register = async (req, res) => {
         const hashedPassword = await bcrypt.hash(password, 10);
 
         const result = await pool.query(
-            'INSERT INTO users (mail, password, phone, created_at) VALUES ($1, $2, $3, NOW()) RETURNING *',
+            `INSERT INTO users (mail, password, phone, created_at) VALUES ($1, $2, $3, NOW()) RETURNING id, mail`,
             [mail, hashedPassword, phone]
         );
 
@@ -52,10 +52,12 @@ export const login = async (req, res) => {
             return res.status(401).json({ error: 'Credenciales inválidas' });
         }
 
+        await pool.query('UPDATE users SET last_sign_in = NOW() WHERE id = $1', [user.id]);
+
         const token = jwt.sign(
             { id: user.id, mail: user.mail },
             JWT_SECRET,
-            { expiresIn: '7d' }
+            { expiresIn: '30d' }
         );
 
         res.status(200).json({ token, user: { id: user.id, mail: user.mail } });
