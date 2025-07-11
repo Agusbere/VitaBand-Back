@@ -1,7 +1,7 @@
 import jwt from 'jsonwebtoken';
 const JWT_SECRET = '@VitaBand_10';
 
-export default function verifyToken(req, res, next) {
+export function authMiddleware(req, res, next) {
     const authHeader = req.headers['authorization'];
     const token = authHeader && authHeader.split(' ')[1];
 
@@ -13,4 +13,4 @@ export default function verifyToken(req, res, next) {
         req.user = user;
         next();
     });
-}
+} 

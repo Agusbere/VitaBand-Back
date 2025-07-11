@@ -1,11 +1,12 @@
 import express from 'express';
 import { relations } from '../controllers/relationsController.js';
+import { authMiddleware } from '../middleware/authMiddleware.js';
 
 const router = express.Router();
 
-router.get('', relations.getAll);
-router.post('', relations.create);
-router.put('/:id', relations.update);
-router.delete('/:id', relations.delete);
+router.get('', authMiddleware, relations.getAll);
+router.post('', authMiddleware, relations.create);
+router.put('/:id', authMiddleware, relations.update);
+router.delete('/:id', authMiddleware, relations.delete);
 
 export default router;
