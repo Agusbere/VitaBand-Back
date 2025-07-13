@@ -1,4 +1,5 @@
 import createGenericController from './genericController.js';
+import pool from '../database/connection.js';
 
 export const users = createGenericController({
     table: 'users',
