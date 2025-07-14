@@ -1,12 +1,13 @@
 import express from 'express';
-import { relations } from '../controllers/relationsController.js';
+import { createRelation, getMyRelations, findAvailableUsers, deleteRelation, getRelationById } from '../controllers/relationsController.js';
 import { authMiddleware } from '../middleware/authMiddleware.js';
 
 const router = express.Router();
 
-router.get('', authMiddleware, relations.getAll);
-router.post('', authMiddleware, relations.create);
-router.put('/:id', authMiddleware, relations.update);
-router.delete('/:id', authMiddleware, relations.delete);
+router.get('/', authMiddleware, getMyRelations);
+router.get('/available-users', authMiddleware, findAvailableUsers);
+router.get('/:id', authMiddleware, getRelationById);
+router.post('/', authMiddleware, createRelation);
+router.delete('/:id', authMiddleware, deleteRelation);
 
 export default router;

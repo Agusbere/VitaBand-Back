@@ -69,6 +69,7 @@ CREATE TABLE public.users (
   last_sign_in timestamp with time zone,
   picture character varying,
   id_gender bigint,
+  user_role boolean,
   CONSTRAINT users_pkey PRIMARY KEY (id),
   CONSTRAINT users_id_gender_fkey FOREIGN KEY (id_gender) REFERENCES public.gender(id)
 );
