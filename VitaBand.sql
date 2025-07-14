@@ -33,6 +33,7 @@ CREATE TABLE public.relations (
   id_bander bigint,
   id_host bigint,
   id_rels bigint,
+  confirmed boolean DEFAULT false,
   CONSTRAINT relations_pkey PRIMARY KEY (id),
   CONSTRAINT relations_id_bander_fkey FOREIGN KEY (id_bander) REFERENCES public.users(id),
   CONSTRAINT relations_id_rels_fkey FOREIGN KEY (id_rels) REFERENCES public.rels(id),
@@ -69,7 +70,6 @@ CREATE TABLE public.users (
   last_sign_in timestamp with time zone,
   picture character varying,
   id_gender bigint,
-  user_role boolean,
   CONSTRAINT users_pkey PRIMARY KEY (id),
   CONSTRAINT users_id_gender_fkey FOREIGN KEY (id_gender) REFERENCES public.gender(id)
 );

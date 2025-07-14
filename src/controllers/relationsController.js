@@ -204,7 +204,7 @@ export const getRelationById = async (req, res) => {
             JOIN users bander ON relations.id_bander = bander.id
             JOIN users hoster ON relations.id_host = hoster.id
             LEFT JOIN rels ON relations.id_rels = rels.id
-            WHERE relations.id = $1 AND (relations.id_bander = $2 OR relations.id_host = $2)
+            WHERE relations.id = $1 OR (relations.id_bander = $2 AND relations.id_host = $2)
         `, [id, userId]);
 
         if (result.rows.length === 0) {
@@ -215,6 +215,38 @@ export const getRelationById = async (req, res) => {
 
     } catch (err) {
         console.error('Error obteniendo relación:', err);
+        res.status(500).json({ error: 'Error interno del servidor' });
+    }
+};
+
+export const confirmRelation = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const result = await pool.query(
+            'UPDATE relations SET confirmed = true WHERE id = $1 RETURNING *',
+            [id]
+        );
+        if (result.rows.length === 0) {
+            return res.status(404).json({ error: 'Relación no encontrada' });
+        }
+        res.status(200).json({ message: 'Relación confirmada', relation: result.rows[0] });
+    } catch (err) {
+        res.status(500).json({ error: 'Error interno del servidor' });
+    }
+};
+
+export const searchUsers = async (req, res) => {
+    try {
+        const { q } = req.query;
+        if (!q) {
+            return res.status(400).json({ error: 'Falta el parámetro de búsqueda' });
+        }
+        const result = await pool.query(
+            `SELECT id, name, surname, mail FROM users WHERE name LIKE $1 OR surname LIKE $1 OR mail LIKE $1`,
+            [q + '%']
+        );
+        res.status(200).json(result.rows);
+    } catch (err) {
         res.status(500).json({ error: 'Error interno del servidor' });
     }
 };
