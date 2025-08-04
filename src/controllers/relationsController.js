@@ -14,7 +14,7 @@ export const createRelation = async (req, res) => {
         }
 
         const usersQuery = await pool.query(
-            'SELECT id, user_role, name FROM users WHERE id IN ($1, $2)',
+            'SELECT id, name FROM users WHERE id IN ($1, $2)',
             [currentUserId, target_user_id]
         );
 
@@ -25,49 +25,23 @@ export const createRelation = async (req, res) => {
         const currentUser = usersQuery.rows.find(user => user.id == currentUserId);
         const targetUser = usersQuery.rows.find(user => user.id == target_user_id);
 
-        if (currentUser.user_role === targetUser.user_role) {
-            return res.status(400).json({ 
-                error: 'No puedes conectarte con alguien del mismo tipo de usuario' 
-            });
-        }
-
-        let id_bander, id_host;
-        if (currentUser.user_role === false || currentUser.user_role === null) {
-            id_bander = currentUserId;
-            id_host = target_user_id;
-        } else {
-            id_bander = target_user_id;
-            id_host = currentUserId;
-        }
-
         const existingRelation = await pool.query(
             'SELECT id FROM relations WHERE id_bander = $1 AND id_host = $2',
-            [id_bander, id_host]
+            [target_user_id, currentUserId]
         );
-
         if (existingRelation.rows.length > 0) {
             return res.status(409).json({ error: 'Esta relación ya existe' });
         }
 
-        const relTypeQuery = await pool.query(
-            'SELECT name FROM rels WHERE id = $1',
-            [id_rels]
-        );
-
-        if (relTypeQuery.rows.length === 0) {
-            return res.status(404).json({ error: 'Tipo de relación no válido' });
-        }
-
         const result = await pool.query(
-            'INSERT INTO relations (id_bander, id_host, id_rels) VALUES ($1, $2, $3) RETURNING *',
-            [id_bander, id_host, id_rels]
+            'INSERT INTO relations (id_bander, id_host, id_rels, confirmed) VALUES ($1, $2, $3, $4) RETURNING *',
+            [target_user_id, currentUserId, id_rels, false]
         );
 
         res.status(201).json({
             message: 'Relación creada exitosamente',
             relation: result.rows[0]
         });
-
     } catch (err) {
         console.error('Error creando relación:', err);
         res.status(500).json({ error: 'Error interno del servidor' });
@@ -235,6 +209,22 @@ export const confirmRelation = async (req, res) => {
     }
 };
 
+export const unconfirmRelation = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const result = await pool.query(
+            'UPDATE relations SET confirmed = false WHERE id = $1 RETURNING *',
+            [id]
+        );
+        if (result.rows.length === 0) {
+            return res.status(404).json({ error: 'Relación no encontrada' });
+        }
+        res.status(200).json({ message: 'Relación marcada como no confirmada', relation: result.rows[0] });
+    } catch (err) {
+        res.status(500).json({ error: 'Error interno del servidor' });
+    }
+};
+
 export const searchUsers = async (req, res) => {
     try {
         const { q } = req.query;
@@ -242,7 +232,7 @@ export const searchUsers = async (req, res) => {
             return res.status(400).json({ error: 'Falta el parámetro de búsqueda' });
         }
         const result = await pool.query(
-            `SELECT id, name, surname, mail FROM users WHERE name LIKE $1 OR surname LIKE $1 OR mail LIKE $1`,
+            `SELECT id, name, surname, mail, phone FROM users WHERE name LIKE $1 OR surname LIKE $1 OR mail LIKE $1`,
             [q + '%']
         );
         res.status(200).json(result.rows);
