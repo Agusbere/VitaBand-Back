@@ -1,1 +1,2 @@
-npm i npm@latest -g
+npm i
+npm start //PARA CORRER EL PROYECTO
