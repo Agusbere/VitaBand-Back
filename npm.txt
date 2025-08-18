@@ -1,2 +1,3 @@
 npm i
+npm run ngrok
 npm start //PARA CORRER EL PROYECTO

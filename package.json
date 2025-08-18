@@ -16,7 +16,8 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "nodemon ./src/index.js"
+    "start": "nodemon ./src/index.js",
+    "ngrok": "cd C:/ngrok-v3-stable-windows-amd64 && ngrok.exe update && ngrok.exe config add-authtoken 2z5cSKlqCgwX8boy391Uy9WSeK1_43RU4sW3jnw4G7DtGgJpp && ngrok.exe http --url=enhanced-obviously-panther.ngrok-free.app 3000 && cd C:/Users/devandroid/Desktop/Vitaband-Back"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.50.0",
