@@ -1,5 +1,6 @@
 import createGenericController from './genericController.js';
 import pool from '../database/connection.js';
+import path from 'path';
 
 export const users = createGenericController({
     table: 'users',
@@ -43,6 +44,29 @@ export const updateExtraData2 = async (req, res) => {
     }
 };
 
+export const uploadProfilePicture = async (req, res) => {
+    try {
+        const userId = req.user.id;
+
+        if (!req.file) {
+            return res.status(400).json({ error: 'No se recibió el archivo. Usa el campo "image".' });
+        }
+
+        const relativePath = path.join('users', userId.toString(), req.file.filename);
+        const publicUrl = `/static/${relativePath}`;
+
+        const result = await pool.query(
+            `UPDATE users SET picture = $1 WHERE id = $2 RETURNING id, picture`,
+            [publicUrl, userId]
+        );
+
+        res.status(200).json(result.rows[0]);
+    } catch (err) {
+        console.error('Error subiendo imagen:', err);
+        res.status(500).json({ error: 'Error interno del servidor' });
+    }
+};
+
 export const getBasicData = async (req, res) => {
     const userId = req.user.id;
     try {
@@ -65,7 +89,7 @@ export const getProfile = async (req, res) => {
                 users.name, 
                 users.mail, 
                 users.surname, 
-                users.brithdate, 
+                users.birthdate, 
                 users.phone, 
                 users.created_at, 
                 users.picture, 
@@ -90,7 +114,12 @@ export const getProfile = async (req, res) => {
 export const updateProfile = async (req, res) => {
     try {
         const userId = req.user.id;
-        const { name, surname, brithdate, phone, picture, id_gender } = req.body;
+        let { name, surname, birthdate, phone, picture, id_gender } = req.body;
+        
+        if (req.file) {
+            const relativePath = path.join('users', userId.toString(), req.file.filename);
+            picture = `/static/${relativePath}`;
+        }
         
         if (id_gender) {
             const genderExists = await pool.query('SELECT id FROM gender WHERE id = $1', [id_gender]);
@@ -101,10 +130,10 @@ export const updateProfile = async (req, res) => {
         
         const result = await pool.query(`
             UPDATE users 
-            SET name = $1, surname = $2, brithdate = $3, phone = $4, picture = $5, id_gender = $6
+            SET name = $1, surname = $2, birthdate = $3, phone = $4, picture = $5, id_gender = $6
             WHERE id = $7 
-            RETURNING id, name, mail, surname, brithdate, phone, picture, id_gender
-        `, [name, surname, brithdate, phone, picture, id_gender, userId]);
+            RETURNING id, name, mail, surname, birthdate, phone, picture, id_gender
+        `, [name, surname, birthdate, phone, picture, id_gender, userId]);
         
         res.status(200).json(result.rows[0]);
     } catch (err) {

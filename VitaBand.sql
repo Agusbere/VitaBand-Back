@@ -64,7 +64,7 @@ CREATE TABLE public.users (
   mail character varying NOT NULL,
   password character varying NOT NULL,
   surname character varying,
-  brithdate date,
+  birthdate date,
   phone character varying,
   created_at timestamp with time zone,
   last_sign_in timestamp with time zone,
