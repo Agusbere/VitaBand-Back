@@ -3,7 +3,7 @@ import pool from '../database/connection.js';
 export const createRelation = async (req, res) => {
     try {
         const currentUserId = req.user.id;
-        const { target_user_id, id_rels } = req.body;
+        const { target_user_id, id_rels} = req.body;
 
         if (!target_user_id || !id_rels) {
             return res.status(400).json({ error: 'Faltan campos obligatorios' });
@@ -195,15 +195,11 @@ export const getRelationById = async (req, res) => {
 
 export const confirmRelation = async (req, res) => {
     try {
-        const userId = req.user.id;
-        const { id_bander, id_host } = req.body;
+        const id_bander = req.user.id;
+        const { id_host } = req.body;
 
-        if (!id_bander || !id_host) {
-            return res.status(400).json({ error: 'Faltan parámetros: id_bander e id_host son requeridos' });
-        }
-
-        if (parseInt(id_bander) !== userId) {
-            return res.status(403).json({ error: 'Solo el bander puede confirmar esta relación' });
+        if (!id_host) {
+            return res.status(400).json({ error: 'Falta el parámetro: id_host es requerido' });
         }
 
         const relationCheck = await pool.query(
@@ -214,8 +210,6 @@ export const confirmRelation = async (req, res) => {
         if (relationCheck.rows.length === 0) {
             return res.status(404).json({ error: 'Relación no encontrada entre estos usuarios' });
         }
-
-        const relation = relationCheck.rows[0];
 
         const result = await pool.query(
             'UPDATE relations SET confirmed = true WHERE id_bander = $1 AND id_host = $2 RETURNING *',
@@ -234,15 +228,11 @@ export const confirmRelation = async (req, res) => {
 
 export const unconfirmRelation = async (req, res) => {
     try {
-        const userId = req.user.id;
-        const { id_bander, id_host } = req.body;
+        const id_bander = req.user.id;
+        const { id_host } = req.body;
 
-        if (!id_bander || !id_host) {
-            return res.status(400).json({ error: 'Faltan parámetros: id_bander e id_host son requeridos' });
-        }
-
-        if (parseInt(id_bander) !== userId) {
-            return res.status(403).json({ error: 'Solo el bander puede desconfirmar esta relación' });
+        if (!id_host) {
+            return res.status(400).json({ error: 'Falta el parámetro: id_host es requerido' });
         }
 
         const relationCheck = await pool.query(
@@ -253,8 +243,6 @@ export const unconfirmRelation = async (req, res) => {
         if (relationCheck.rows.length === 0) {
             return res.status(404).json({ error: 'Relación no encontrada entre estos usuarios' });
         }
-
-        const relation = relationCheck.rows[0];
 
         const result = await pool.query(
             'UPDATE relations SET confirmed = false WHERE id_bander = $1 AND id_host = $2 RETURNING *',
