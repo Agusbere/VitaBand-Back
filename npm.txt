@@ -1,3 +1,4 @@
 npm i -g npm@latest
+npm i
 npm run ngrok
 npm start //PARA CORRER EL PROYECTO

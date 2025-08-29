@@ -31,22 +31,44 @@ export const updateExtraData1 = async (req, res) => {
     }
 };
 
-
 export const updateExtraData2 = async (req, res) => {
     const userId = req.user.id;
     try {
         console.log('updateExtraData2: inicio');
         console.log('req.file:', req.file);
-        const publicUrl = await uploadProfilePicture(req, res, true);
-        console.log('publicUrl recibido:', publicUrl);
-        if (!publicUrl) {
-            console.log('No se obtuvo publicUrl, uploadProfilePicture ya respondió');
-            return;
+        
+        if (!req.file) {
+            return res.status(StatusCodes.BAD_REQUEST).json({ error: 'No se recibió el archivo. Usa el campo "image".' });
         }
+
+        // Subir imagen a Supabase Storage
+        const ext = req.file.originalname.split('.').pop();
+        const filePath = `users/${userId}/profile-picture.${ext}`;
+        console.log('updateExtraData2: filePath', filePath);
+        
+        const { error: uploadError } = await supabase.storage
+            .from('uploads')
+            .upload(filePath, req.file.buffer, { 
+                contentType: req.file.mimetype, 
+                upsert: true 
+            });
+            
+        if (uploadError) {
+            console.error('updateExtraData2: uploadError', uploadError);
+            return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ error: 'Error subiendo imagen a Supabase' });
+        }
+        
+        // Obtener URL pública
+        const { data } = supabase.storage.from('uploads').getPublicUrl(filePath);
+        const publicUrl = data.publicUrl;
+        console.log('updateExtraData2: publicUrl', publicUrl);
+        
+        // Guardar URL en base de datos
         const result = await pool.query(
             `UPDATE users SET picture = $1 WHERE id = $2 RETURNING id, picture`,
             [publicUrl, userId]
         );
+        
         console.log('updateExtraData2: update result', result.rows[0]);
         res.status(StatusCodes.OK).json(result.rows[0]);
     } catch (err) {
@@ -55,34 +77,41 @@ export const updateExtraData2 = async (req, res) => {
     }
 };
 
-export const uploadProfilePicture = async (req, res, returnUrlOnly = false) => {
+export const uploadProfilePicture = async (req, res) => {
     const userId = req.user.id;
     console.log('uploadProfilePicture: inicio');
+    
     if (!req.file) {
         console.log('uploadProfilePicture: req.file no existe');
-        if (returnUrlOnly) return null;
         return res.status(StatusCodes.BAD_REQUEST).json({ error: 'No se recibió el archivo. Usa el campo "image".' });
     }
+    
     const ext = req.file.originalname.split('.').pop();
     const filePath = `users/${userId}/profile-picture.${ext}`;
     console.log('uploadProfilePicture: filePath', filePath);
+    
     try {
+        // Subir imagen a Supabase Storage
         const { error: uploadError } = await supabase.storage
             .from('uploads')
-            .upload(filePath, req.file.buffer, { contentType: req.file.mimetype, upsert: true });
+            .upload(filePath, req.file.buffer, { 
+                contentType: req.file.mimetype, 
+                upsert: true 
+            });
+            
         if (uploadError) {
-            console.log('uploadProfilePicture: uploadError', uploadError);
-            if (returnUrlOnly) return null;
+            console.error('uploadProfilePicture: uploadError', uploadError);
             return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ error: 'Error subiendo imagen a Supabase' });
         }
+        
+        // Obtener URL pública
         const { data } = supabase.storage.from('uploads').getPublicUrl(filePath);
         const publicUrl = data.publicUrl;
         console.log('uploadProfilePicture: publicUrl', publicUrl);
-        if (returnUrlOnly) return publicUrl;
+        
         res.status(StatusCodes.OK).json({ url: publicUrl });
     } catch (err) {
         console.error('uploadProfilePicture: error', err);
-        if (returnUrlOnly) return null;
         res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ error: getReasonPhrase(StatusCodes.INTERNAL_SERVER_ERROR) });
     }
 };
@@ -135,30 +164,56 @@ export const updateProfile = async (req, res) => {
     try {
         const userId = req.user.id;
         let { name, surname, birthdate, phone, picture, id_gender } = req.body;
+        
+        console.log('updateProfile: inicio');
+        console.log('updateProfile: req.file:', req.file);
+        console.log('updateProfile: req.body:', req.body);
+        
+        // Si se envió una imagen, subirla a Supabase Storage
         if (req.file) {
+            console.log('updateProfile: procesando imagen');
             const ext = req.file.originalname.split('.').pop();
             const filePath = `users/${userId}/profile-picture.${ext}`;
+            
             const { error: uploadError } = await supabase.storage
                 .from('uploads')
-                .upload(filePath, req.file.buffer, { contentType: req.file.mimetype, upsert: true });
+                .upload(filePath, req.file.buffer, { 
+                    contentType: req.file.mimetype, 
+                    upsert: true 
+                });
+                
             if (uploadError) {
+                console.error('updateProfile: uploadError', uploadError);
                 return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ error: 'Error subiendo imagen a Supabase' });
             }
+            
             const { data } = supabase.storage.from('uploads').getPublicUrl(filePath);
             picture = data.publicUrl;
+            console.log('updateProfile: nueva picture URL', picture);
         }
+        
+        // Validar género si se proporciona
         if (id_gender) {
             const genderExists = await pool.query('SELECT id FROM gender WHERE id = $1', [id_gender]);
             if (genderExists.rows.length === 0) {
                 return res.status(StatusCodes.NOT_FOUND).json({ error: 'Género no encontrado' });
             }
         }
+        
+        // Actualizar perfil en base de datos
         const result = await pool.query(`
             UPDATE users 
-            SET name = $1, surname = $2, birthdate = $3, phone = $4, picture = $5, id_gender = $6
+            SET name = COALESCE($1, name), 
+                surname = COALESCE($2, surname), 
+                birthdate = COALESCE($3, birthdate), 
+                phone = COALESCE($4, phone), 
+                picture = COALESCE($5, picture), 
+                id_gender = COALESCE($6, id_gender)
             WHERE id = $7 
             RETURNING id, name, mail, surname, birthdate, phone, picture, id_gender
         `, [name, surname, birthdate, phone, picture, id_gender, userId]);
+        
+        console.log('updateProfile: resultado', result.rows[0]);
         res.status(StatusCodes.OK).json(result.rows[0]);
     } catch (err) {
         console.error('Error actualizando perfil:', err);
