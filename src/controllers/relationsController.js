@@ -1,4 +1,5 @@
 import pool from '../database/connection.js';
+import { StatusCodes, getReasonPhrase } from 'http-status-codes';
 
 export const createRelation = async (req, res) => {
     try {
@@ -6,11 +7,11 @@ export const createRelation = async (req, res) => {
         const { target_user_id, id_rels} = req.body;
 
         if (!target_user_id || !id_rels) {
-            return res.status(400).json({ error: 'Faltan campos obligatorios' });
+            return res.status(StatusCodes.BAD_REQUEST).json({ error: getReasonPhrase(StatusCodes.BAD_REQUEST) });
         }
 
         if (currentUserId === parseInt(target_user_id)) {
-            return res.status(400).json({ error: 'No puedes crear una relación contigo mismo' });
+            return res.status(StatusCodes.BAD_REQUEST).json({ error: 'No puedes crear una relación contigo mismo' });
         }
 
         const usersQuery = await pool.query(
@@ -19,7 +20,7 @@ export const createRelation = async (req, res) => {
         );
 
         if (usersQuery.rows.length !== 2) {
-            return res.status(404).json({ error: 'Usuario no encontrado' });
+            return res.status(StatusCodes.NOT_FOUND).json({ error: 'Usuario no encontrado' });
         }
 
         const currentUser = usersQuery.rows.find(user => user.id == currentUserId);
@@ -30,7 +31,7 @@ export const createRelation = async (req, res) => {
             [target_user_id, currentUserId]
         );
         if (existingRelation.rows.length > 0) {
-            return res.status(409).json({ error: 'Esta relación ya existe' });
+            return res.status(StatusCodes.CONFLICT).json({ error: getReasonPhrase(StatusCodes.CONFLICT) });
         }
 
         const result = await pool.query(
@@ -38,13 +39,13 @@ export const createRelation = async (req, res) => {
             [target_user_id, currentUserId, id_rels, false]
         );
 
-        res.status(201).json({
+        res.status(StatusCodes.CREATED).json({
             message: 'Relación creada exitosamente',
             relation: result.rows[0]
         });
     } catch (err) {
         console.error('Error creando relación:', err);
-        res.status(500).json({ error: 'Error interno del servidor' });
+    res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ error: getReasonPhrase(StatusCodes.INTERNAL_SERVER_ERROR) });
     }
 };
 
@@ -86,11 +87,11 @@ export const getMyRelations = async (req, res) => {
             ORDER BY relations.id DESC
         `, [userId]);
 
-        res.status(200).json(result.rows);
+    res.status(StatusCodes.OK).json(result.rows);
 
     } catch (err) {
         console.error('Error obteniendo relaciones:', err);
-        res.status(500).json({ error: 'Error interno del servidor' });
+    res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ error: getReasonPhrase(StatusCodes.INTERNAL_SERVER_ERROR) });
     }
 };
 
@@ -104,7 +105,7 @@ export const findAvailableUsers = async (req, res) => {
         );
 
         if (userQuery.rows.length === 0) {
-            return res.status(404).json({ error: 'Usuario no encontrado' });
+            return res.status(StatusCodes.NOT_FOUND).json({ error: 'Usuario no encontrado' });
         }
 
         const userRole = userQuery.rows[0].user_role;
@@ -131,11 +132,11 @@ export const findAvailableUsers = async (req, res) => {
             ORDER BY users.created_at DESC
         `, [targetRole, userId, userRole]);
 
-        res.status(200).json(result.rows);
+    res.status(StatusCodes.OK).json(result.rows);
 
     } catch (err) {
         console.error('Error buscando usuarios:', err);
-        res.status(500).json({ error: 'Error interno del servidor' });
+    res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ error: getReasonPhrase(StatusCodes.INTERNAL_SERVER_ERROR) });
     }
 };
 
@@ -150,14 +151,14 @@ export const deleteRelation = async (req, res) => {
         );
 
         if (result.rows.length === 0) {
-            return res.status(404).json({ error: 'Relación no encontrada' });
+            return res.status(StatusCodes.NOT_FOUND).json({ error: 'Relación no encontrada' });
         }
 
-        res.status(200).json({ message: 'Relación eliminada exitosamente' });
+        res.status(StatusCodes.OK).json({ message: 'Relación eliminada exitosamente' });
 
     } catch (err) {
         console.error('Error eliminando relación:', err);
-        res.status(500).json({ error: 'Error interno del servidor' });
+    res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ error: getReasonPhrase(StatusCodes.INTERNAL_SERVER_ERROR) });
     }
 };
 
@@ -182,14 +183,14 @@ export const getRelationById = async (req, res) => {
         `, [id, userId]);
 
         if (result.rows.length === 0) {
-            return res.status(404).json({ error: 'Relación no encontrada' });
+            return res.status(StatusCodes.NOT_FOUND).json({ error: 'Relación no encontrada' });
         }
 
-        res.status(200).json(result.rows[0]);
+    res.status(StatusCodes.OK).json(result.rows[0]);
 
     } catch (err) {
         console.error('Error obteniendo relación:', err);
-        res.status(500).json({ error: 'Error interno del servidor' });
+    res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ error: getReasonPhrase(StatusCodes.INTERNAL_SERVER_ERROR) });
     }
 };
 
@@ -199,7 +200,7 @@ export const confirmRelation = async (req, res) => {
         const { id_host } = req.body;
 
         if (!id_host) {
-            return res.status(400).json({ error: 'Falta el parámetro: id_host es requerido' });
+            return res.status(StatusCodes.BAD_REQUEST).json({ error: 'Falta el parámetro: id_host es requerido' });
         }
 
         const relationCheck = await pool.query(
@@ -208,7 +209,7 @@ export const confirmRelation = async (req, res) => {
         );
 
         if (relationCheck.rows.length === 0) {
-            return res.status(404).json({ error: 'Relación no encontrada entre estos usuarios' });
+            return res.status(StatusCodes.NOT_FOUND).json({ error: 'Relación no encontrada entre estos usuarios' });
         }
 
         const result = await pool.query(
@@ -216,13 +217,13 @@ export const confirmRelation = async (req, res) => {
             [id_bander, id_host]
         );
 
-        res.status(200).json({ 
+        res.status(StatusCodes.OK).json({ 
             message: 'Relación confirmada exitosamente', 
             relation: result.rows[0] 
         });
     } catch (err) {
         console.error('Error confirmando relación:', err);
-        res.status(500).json({ error: 'Error interno del servidor' });
+    res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ error: getReasonPhrase(StatusCodes.INTERNAL_SERVER_ERROR) });
     }
 };
 
@@ -232,7 +233,7 @@ export const unconfirmRelation = async (req, res) => {
         const { id_host } = req.body;
 
         if (!id_host) {
-            return res.status(400).json({ error: 'Falta el parámetro: id_host es requerido' });
+            return res.status(StatusCodes.BAD_REQUEST).json({ error: 'Falta el parámetro: id_host es requerido' });
         }
 
         const relationCheck = await pool.query(
@@ -241,7 +242,7 @@ export const unconfirmRelation = async (req, res) => {
         );
 
         if (relationCheck.rows.length === 0) {
-            return res.status(404).json({ error: 'Relación no encontrada entre estos usuarios' });
+            return res.status(StatusCodes.NOT_FOUND).json({ error: 'Relación no encontrada entre estos usuarios' });
         }
 
         const result = await pool.query(
@@ -249,13 +250,13 @@ export const unconfirmRelation = async (req, res) => {
             [id_bander, id_host]
         );
 
-        res.status(200).json({ 
+        res.status(StatusCodes.OK).json({ 
             message: 'Relación desconfirmada exitosamente', 
             relation: result.rows[0] 
         });
     } catch (err) {
         console.error('Error desconfirmando relación:', err);
-        res.status(500).json({ error: 'Error interno del servidor' });
+    res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ error: getReasonPhrase(StatusCodes.INTERNAL_SERVER_ERROR) });
     }
 };
 
@@ -263,14 +264,14 @@ export const searchUsers = async (req, res) => {
     try {
         const { q } = req.query;
         if (!q) {
-            return res.status(400).json({ error: 'Falta el parámetro de búsqueda' });
+            return res.status(StatusCodes.BAD_REQUEST).json({ error: 'Falta el parámetro de búsqueda' });
         }
         const result = await pool.query(
             `SELECT id, name, surname, mail, phone FROM users WHERE name LIKE $1 OR surname LIKE $1 OR mail LIKE $1`,
             [q + '%']
         );
-        res.status(200).json(result.rows);
+    res.status(StatusCodes.OK).json(result.rows);
     } catch (err) {
-        res.status(500).json({ error: 'Error interno del servidor' });
+    res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ error: getReasonPhrase(StatusCodes.INTERNAL_SERVER_ERROR) });
     }
 };

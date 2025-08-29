@@ -1,14 +1,15 @@
 import pool from '../database/connection.js';
+import { StatusCodes, getReasonPhrase } from 'http-status-codes';
 
 export default function createGenericController({ table, insertFields, updateFields, label }) {
     return {
         getAll: async (req, res) => {
             try {
                 const result = await pool.query(`SELECT * FROM ${table}`);
-                res.status(200).json(result.rows);
+                res.status(StatusCodes.OK).json(result.rows);
             } catch (error) {
                 console.error(`Error al obtener ${label}:`, error);
-                res.status(500).json({ error: 'Error interno del servidor' });
+                res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ error: getReasonPhrase(StatusCodes.INTERNAL_SERVER_ERROR) });
             }
         },
 
@@ -22,10 +23,10 @@ export default function createGenericController({ table, insertFields, updateFie
                     `INSERT INTO ${table} (${fieldsString}) VALUES (${placeholders}) RETURNING *`,
                     values
                 );
-                res.status(201).json(result.rows[0]);
+                res.status(StatusCodes.CREATED).json(result.rows[0]);
             } catch (error) {
                 console.error(`Error al crear ${label}:`, error);
-                res.status(500).json({ error: 'Error interno del servidor' });
+                res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ error: getReasonPhrase(StatusCodes.INTERNAL_SERVER_ERROR) });
             }
         },
 
@@ -40,12 +41,12 @@ export default function createGenericController({ table, insertFields, updateFie
                     [...values, id]
                 );
                 if (result.rowCount === 0) {
-                    return res.status(404).json({ error: `${label} no encontrado` });
+                    return res.status(StatusCodes.NOT_FOUND).json({ error: `${label} no encontrado` });
                 }
-                res.status(200).json(result.rows[0]);
+                res.status(StatusCodes.OK).json(result.rows[0]);
             } catch (error) {
                 console.error(`Error al actualizar ${label}:`, error);
-                res.status(500).json({ error: 'Error interno del servidor' });
+                res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ error: getReasonPhrase(StatusCodes.INTERNAL_SERVER_ERROR) });
             }
         },
 
@@ -57,12 +58,12 @@ export default function createGenericController({ table, insertFields, updateFie
                     [id]
                 );
                 if (result.rowCount === 0) {
-                    return res.status(404).json({ error: `${label} no encontrado` });
+                    return res.status(StatusCodes.NOT_FOUND).json({ error: `${label} no encontrado` });
                 }
-                res.status(200).json({ message: `${label} eliminado correctamente` });
+                res.status(StatusCodes.OK).json({ message: `${label} eliminado correctamente` });
             } catch (error) {
                 console.error(`Error al eliminar ${label}:`, error);
-                res.status(500).json({ error: 'Error interno del servidor' });
+                res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ error: getReasonPhrase(StatusCodes.INTERNAL_SERVER_ERROR) });
             }
         }
     };

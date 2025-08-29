@@ -1,6 +1,8 @@
+
 import pool from '../database/connection.js';
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
+import { StatusCodes, getReasonPhrase } from 'http-status-codes';
 
 const JWT_SECRET = process.env.JWT_SECRET || '@VitaBand_10';
 
@@ -8,13 +10,13 @@ export const register = async (req, res) => {
     const { mail, password, phone } = req.body;
 
     if (!mail || !password || !phone) {
-        return res.status(400).json({ error: 'Faltan campos obligatorios' });
+        return res.status(StatusCodes.BAD_REQUEST).json({ error: getReasonPhrase(StatusCodes.BAD_REQUEST) });
     }
 
     try {
         const existing = await pool.query('SELECT * FROM users WHERE mail = $1', [mail]);
         if (existing.rows.length > 0) {
-            return res.status(409).json({ error: 'El correo ya está registrado' });
+            return res.status(StatusCodes.CONFLICT).json({ error: 'El correo ya está registrado' });
         }
 
         const hashedPassword = await bcrypt.hash(password, 10);
@@ -33,14 +35,14 @@ export const register = async (req, res) => {
             { expiresIn: '30d' }
         );
 
-        res.status(201).json({ 
+        res.status(StatusCodes.CREATED).json({ 
             message: 'Usuario registrado correctamente', 
             user: { id: user.id, mail: user.mail },
             token 
         });
     } catch (err) {
         console.error('Error en registro:', err);
-        res.status(500).json({ error: 'Error interno del servidor' });
+    res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ error: getReasonPhrase(StatusCodes.INTERNAL_SERVER_ERROR) });
     }
 };
 
@@ -48,7 +50,7 @@ export const login = async (req, res) => {
     const { mail, password } = req.body;
 
     if (!mail || !password) {
-        return res.status(400).json({ error: 'Mail y contraseña son obligatorios' });
+        return res.status(StatusCodes.BAD_REQUEST).json({ error: 'Mail y contraseña son obligatorios' });
     }
 
     try {
@@ -56,13 +58,13 @@ export const login = async (req, res) => {
         const user = result.rows[0];
 
         if (!user) {
-            return res.status(401).json({ error: 'Credenciales inválidas' });
+            return res.status(StatusCodes.UNAUTHORIZED).json({ error: getReasonPhrase(StatusCodes.UNAUTHORIZED) });
         }
 
         const validPassword = await bcrypt.compare(password, user.password);
 
         if (!validPassword) {
-            return res.status(401).json({ error: 'Credenciales inválidas' });
+            return res.status(StatusCodes.UNAUTHORIZED).json({ error: getReasonPhrase(StatusCodes.UNAUTHORIZED) });
         }
 
         await pool.query('UPDATE users SET last_sign_in = NOW() WHERE id = $1', [user.id]);
@@ -76,7 +78,7 @@ export const login = async (req, res) => {
         // No devolver información sensible
         const { password: _, ...userWithoutPassword } = user;
 
-        res.status(200).json({ 
+        res.status(StatusCodes.OK).json({ 
             token, 
             user: { 
                 id: user.id, 
@@ -87,7 +89,7 @@ export const login = async (req, res) => {
         });
     } catch (err) {
         console.error('Error en login:', err);
-        res.status(500).json({ error: 'Error interno del servidor' });
+    res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ error: getReasonPhrase(StatusCodes.INTERNAL_SERVER_ERROR) });
     }
 };
 
@@ -100,13 +102,13 @@ export const verifyToken = async (req, res) => {
         );
 
         if (result.rows.length === 0) {
-            return res.status(404).json({ error: 'Usuario no encontrado' });
+            return res.status(StatusCodes.NOT_FOUND).json({ error: 'Usuario no encontrado' });
         }
 
-        res.status(200).json({ user: result.rows[0] });
+    res.status(StatusCodes.OK).json({ user: result.rows[0] });
     } catch (err) {
         console.error('Error en verificación:', err);
-        res.status(500).json({ error: 'Error interno del servidor' });
+    res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ error: getReasonPhrase(StatusCodes.INTERNAL_SERVER_ERROR) });
     }
 };
 
@@ -117,7 +119,7 @@ export const getTokenByUserId = async (req, res) => {
         const result = await pool.query('SELECT id, mail FROM users WHERE id = $1', [userId]);
 
         if (result.rows.length === 0) {
-            return res.status(404).json({ error: 'Usuario no encontrado' });
+            return res.status(StatusCodes.NOT_FOUND).json({ error: 'Usuario no encontrado' });
         }
 
         const user = result.rows[0];
@@ -128,9 +130,9 @@ export const getTokenByUserId = async (req, res) => {
             { expiresIn: '30d' }
         );
 
-        res.status(200).json({ token });
+    res.status(StatusCodes.OK).json({ token });
     } catch (err) {
         console.error('Error obteniendo token:', err);
-        res.status(500).json({ error: 'Error interno del servidor' });
+    res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ error: getReasonPhrase(StatusCodes.INTERNAL_SERVER_ERROR) });
     }
 };

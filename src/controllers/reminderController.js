@@ -1,5 +1,6 @@
 import createGenericController from './genericController.js';
 import pool from '../database/connection.js';
+import { StatusCodes, getReasonPhrase } from 'http-status-codes';
 
 export const reminder = createGenericController({
     table: 'reminder',
@@ -26,10 +27,10 @@ export const getAllReminders = async (req, res) => {
             ORDER BY reminder.id DESC
         `, [userId]);
         
-        res.status(200).json(result.rows);
+    res.status(StatusCodes.OK).json(result.rows);
     } catch (err) {
         console.error('Error obteniendo recordatorios:', err);
-        res.status(500).json({ error: 'Error interno del servidor' });
+    res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ error: getReasonPhrase(StatusCodes.INTERNAL_SERVER_ERROR) });
     }
 };
 
@@ -53,13 +54,13 @@ export const getReminderById = async (req, res) => {
         `, [id, userId]);
         
         if (result.rows.length === 0) {
-            return res.status(404).json({ error: 'Recordatorio no encontrado' });
+            return res.status(StatusCodes.NOT_FOUND).json({ error: 'Recordatorio no encontrado' });
         }
         
-        res.status(200).json(result.rows[0]);
+    res.status(StatusCodes.OK).json(result.rows[0]);
     } catch (err) {
         console.error('Error obteniendo recordatorio:', err);
-        res.status(500).json({ error: 'Error interno del servidor' });
+    res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ error: getReasonPhrase(StatusCodes.INTERNAL_SERVER_ERROR) });
     }
 };
 
@@ -69,13 +70,13 @@ export const createReminder = async (req, res) => {
         const userId = req.user.id;
         
         if (!title || !description || !id_color || repetition === undefined) {
-            return res.status(400).json({ error: 'Faltan campos obligatorios' });
+            return res.status(StatusCodes.BAD_REQUEST).json({ error: getReasonPhrase(StatusCodes.BAD_REQUEST) });
         }
 
         if (id_color) {
             const colorExists = await pool.query('SELECT id FROM color WHERE id = $1', [id_color]);
             if (colorExists.rows.length === 0) {
-                return res.status(404).json({ error: 'Color no encontrado' });
+                return res.status(StatusCodes.NOT_FOUND).json({ error: 'Color no encontrado' });
             }
         }
         
@@ -86,7 +87,7 @@ export const createReminder = async (req, res) => {
             );
             
             if (medicationCheck.rows.length === 0) {
-                return res.status(403).json({ error: 'No tienes acceso a esta medicación' });
+                return res.status(StatusCodes.FORBIDDEN).json({ error: getReasonPhrase(StatusCodes.FORBIDDEN) });
             }
         }
         
@@ -96,10 +97,10 @@ export const createReminder = async (req, res) => {
             RETURNING *
         `, [title, description, id_color, repetition, id_medication, hour, min]);
         
-        res.status(201).json(result.rows[0]);
+    res.status(StatusCodes.CREATED).json(result.rows[0]);
     } catch (err) {
         console.error('Error creando recordatorio:', err);
-        res.status(500).json({ error: 'Error interno del servidor' });
+    res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ error: getReasonPhrase(StatusCodes.INTERNAL_SERVER_ERROR) });
     }
 };
 
@@ -112,7 +113,7 @@ export const updateReminder = async (req, res) => {
         if (id_color) {
             const colorExists = await pool.query('SELECT id FROM color WHERE id = $1', [id_color]);
             if (colorExists.rows.length === 0) {
-                return res.status(404).json({ error: 'Color no encontrado' });
+                return res.status(StatusCodes.NOT_FOUND).json({ error: 'Color no encontrado' });
             }
         }
         
@@ -123,7 +124,7 @@ export const updateReminder = async (req, res) => {
             );
             
             if (medicationCheck.rows.length === 0) {
-                return res.status(403).json({ error: 'No tienes acceso a esta medicación' });
+                return res.status(StatusCodes.FORBIDDEN).json({ error: getReasonPhrase(StatusCodes.FORBIDDEN) });
             }
         }
         
@@ -134,7 +135,7 @@ export const updateReminder = async (req, res) => {
         `, [id, userId]);
         
         if (reminderCheck.rows.length === 0) {
-            return res.status(404).json({ error: 'Recordatorio no encontrado' });
+            return res.status(StatusCodes.NOT_FOUND).json({ error: 'Recordatorio no encontrado' });
         }
         
         const result = await pool.query(`
@@ -145,10 +146,10 @@ export const updateReminder = async (req, res) => {
             RETURNING *
         `, [title, description, id_color, repetition, confirmed, id_medication, hour, min, id]);
         
-        res.status(200).json(result.rows[0]);
+    res.status(StatusCodes.OK).json(result.rows[0]);
     } catch (err) {
         console.error('Error actualizando recordatorio:', err);
-        res.status(500).json({ error: 'Error interno del servidor' });
+    res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ error: getReasonPhrase(StatusCodes.INTERNAL_SERVER_ERROR) });
     }
 };
 
@@ -164,14 +165,13 @@ export const deleteReminder = async (req, res) => {
         `, [id, userId]);
         
         if (reminderCheck.rows.length === 0) {
-            return res.status(404).json({ error: 'Recordatorio no encontrado' });
+            return res.status(StatusCodes.NOT_FOUND).json({ error: 'Recordatorio no encontrado' });
         }
         
-        await pool.query('DELETE FROM reminder WHERE id = $1', [id]);
-        
-        res.status(200).json({ message: 'Recordatorio eliminado correctamente' });
+    await pool.query('DELETE FROM reminder WHERE id = $1', [id]);
+    res.status(StatusCodes.OK).json({ message: 'Recordatorio eliminado correctamente' });
     } catch (err) {
         console.error('Error eliminando recordatorio:', err);
-        res.status(500).json({ error: 'Error interno del servidor' });
+    res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ error: getReasonPhrase(StatusCodes.INTERNAL_SERVER_ERROR) });
     }
 };

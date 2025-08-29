@@ -1,6 +1,7 @@
 import createGenericController from './genericController.js';
 import pool from '../database/connection.js';
 import path from 'path';
+import { StatusCodes, getReasonPhrase } from 'http-status-codes';
 
 export const users = createGenericController({
     table: 'users',
@@ -14,7 +15,7 @@ export const updateExtraData1 = async (req, res) => {
     const { name, surname, birthdate, id_gender } = req.body;
     try {
         if (!name || !surname || !birthdate || !id_gender) {
-            return res.status(400).json({ error: 'Faltan datos' });
+            return res.status(StatusCodes.BAD_REQUEST).json({ error: getReasonPhrase(StatusCodes.BAD_REQUEST) });
         }
         const genderResult = await pool.query('SELECT id FROM gender WHERE id = $1', [id_gender]);
         if (genderResult.rowCount === 0) {
@@ -24,9 +25,9 @@ export const updateExtraData1 = async (req, res) => {
             `UPDATE users SET name = $1, surname = $2, birthdate = $3, id_gender = $4 WHERE id = $5 RETURNING id, name, surname, birthdate, id_gender`,
             [name, surname, birthdate, id_gender, userId]
         );
-        res.status(200).json(result.rows[0]);
+        res.status(StatusCodes.OK).json(result.rows[0]);
     } catch (err) {
-        res.status(500).json({ error: 'Error interno del servidor' });
+        res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ error: getReasonPhrase(StatusCodes.INTERNAL_SERVER_ERROR) });
     }
 };
 
@@ -40,7 +41,7 @@ export const updateExtraData2 = async (req, res) => {
         );
         res.status(200).json(result.rows[0]);
     } catch (err) {
-        res.status(500).json({ error: 'Error interno del servidor' });
+        res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ error: getReasonPhrase(StatusCodes.INTERNAL_SERVER_ERROR) });
     }
 };
 
@@ -49,7 +50,7 @@ export const uploadProfilePicture = async (req, res) => {
         const userId = req.user.id;
 
         if (!req.file) {
-            return res.status(400).json({ error: 'No se recibió el archivo. Usa el campo "image".' });
+            return res.status(StatusCodes.BAD_REQUEST).json({ error: 'No se recibió el archivo. Usa el campo "image".' });
         }
 
         const relativePath = path.join('users', userId.toString(), req.file.filename);
@@ -63,7 +64,7 @@ export const uploadProfilePicture = async (req, res) => {
         res.status(200).json(result.rows[0]);
     } catch (err) {
         console.error('Error subiendo imagen:', err);
-        res.status(500).json({ error: 'Error interno del servidor' });
+    res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ error: getReasonPhrase(StatusCodes.INTERNAL_SERVER_ERROR) });
     }
 };
 
@@ -76,7 +77,7 @@ export const getBasicData = async (req, res) => {
         );
         res.status(200).json(result.rows[0]);
     } catch (err) {
-        res.status(500).json({ error: 'Error interno del servidor' });
+        res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ error: getReasonPhrase(StatusCodes.INTERNAL_SERVER_ERROR) });
     }
 };
 
@@ -101,13 +102,13 @@ export const getProfile = async (req, res) => {
         `, [userId]);
         
         if (result.rows.length === 0) {
-            return res.status(404).json({ error: 'Usuario no encontrado' });
+            return res.status(StatusCodes.NOT_FOUND).json({ error: 'Usuario no encontrado' });
         }
         
         res.status(200).json(result.rows[0]);
     } catch (err) {
         console.error('Error obteniendo perfil:', err);
-        res.status(500).json({ error: 'Error interno del servidor' });
+        res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ error: getReasonPhrase(StatusCodes.INTERNAL_SERVER_ERROR) });
     }
 };
 
@@ -124,7 +125,7 @@ export const updateProfile = async (req, res) => {
         if (id_gender) {
             const genderExists = await pool.query('SELECT id FROM gender WHERE id = $1', [id_gender]);
             if (genderExists.rows.length === 0) {
-                return res.status(404).json({ error: 'Género no encontrado' });
+                return res.status(StatusCodes.NOT_FOUND).json({ error: 'Género no encontrado' });
             }
         }
         
@@ -138,7 +139,7 @@ export const updateProfile = async (req, res) => {
         res.status(200).json(result.rows[0]);
     } catch (err) {
         console.error('Error actualizando perfil:', err);
-        res.status(500).json({ error: 'Error interno del servidor' });
+        res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ error: getReasonPhrase(StatusCodes.INTERNAL_SERVER_ERROR) });
     }
 };
 
@@ -152,7 +153,7 @@ export const deleteProfile = async (req, res) => {
         );
 
         if (hasRelations.rows.length > 0) {
-            return res.status(400).json({ 
+            return res.status(StatusCodes.BAD_REQUEST).json({ 
                 error: 'No puedes eliminar tu cuenta mientras tengas relaciones activas' 
             });
         }
@@ -165,6 +166,6 @@ export const deleteProfile = async (req, res) => {
         res.status(200).json({ message: 'Cuenta eliminada correctamente' });
     } catch (err) {
         console.error('Error eliminando perfil:', err);
-        res.status(500).json({ error: 'Error interno del servidor' });
+        res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ error: getReasonPhrase(StatusCodes.INTERNAL_SERVER_ERROR) });
     }
 };

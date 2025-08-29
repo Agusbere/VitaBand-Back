@@ -1,5 +1,6 @@
 import createGenericController from './genericController.js';
 import pool from '../database/connection.js';
+import { StatusCodes, getReasonPhrase } from 'http-status-codes';
 
 export const medication = createGenericController({
     table: 'medication',
@@ -21,10 +22,10 @@ export const getAllMedications = async (req, res) => {
             ORDER BY medication.start DESC
         `, [userId]);
         
-        res.status(200).json(result.rows);
+    res.status(StatusCodes.OK).json(result.rows);
     } catch (err) {
         console.error('Error obteniendo medicaciones:', err);
-        res.status(500).json({ error: 'Error interno del servidor' });
+    res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ error: getReasonPhrase(StatusCodes.INTERNAL_SERVER_ERROR) });
     }
 };
 
@@ -43,13 +44,13 @@ export const getMedicationById = async (req, res) => {
         `, [id, userId]);
         
         if (result.rows.length === 0) {
-            return res.status(404).json({ error: 'Medicación no encontrada' });
+            return res.status(StatusCodes.NOT_FOUND).json({ error: 'Medicación no encontrada' });
         }
         
-        res.status(200).json(result.rows[0]);
+    res.status(StatusCodes.OK).json(result.rows[0]);
     } catch (err) {
         console.error('Error obteniendo medicación:', err);
-        res.status(500).json({ error: 'Error interno del servidor' });
+    res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ error: getReasonPhrase(StatusCodes.INTERNAL_SERVER_ERROR) });
     }
 };
 
@@ -59,12 +60,12 @@ export const createMedication = async (req, res) => {
         const userId = req.user.id;
         
         if (!start || !finish || !frecuency || !id_meds) {
-            return res.status(400).json({ error: 'Faltan campos obligatorios' });
+            return res.status(StatusCodes.BAD_REQUEST).json({ error: getReasonPhrase(StatusCodes.BAD_REQUEST) });
         }
 
         const medExists = await pool.query('SELECT id FROM meds WHERE id = $1', [id_meds]);
         if (medExists.rows.length === 0) {
-            return res.status(404).json({ error: 'Medicamento no encontrado' });
+            return res.status(StatusCodes.NOT_FOUND).json({ error: 'Medicamento no encontrado' });
         }
         
         const result = await pool.query(`
@@ -73,10 +74,10 @@ export const createMedication = async (req, res) => {
             RETURNING *
         `, [userId, start, finish, frecuency, id_meds]);
         
-        res.status(201).json(result.rows[0]);
+    res.status(StatusCodes.CREATED).json(result.rows[0]);
     } catch (err) {
         console.error('Error creando medicación:', err);
-        res.status(500).json({ error: 'Error interno del servidor' });
+    res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ error: getReasonPhrase(StatusCodes.INTERNAL_SERVER_ERROR) });
     }
 };
 
@@ -89,7 +90,7 @@ export const updateMedication = async (req, res) => {
         if (id_meds) {
             const medExists = await pool.query('SELECT id FROM meds WHERE id = $1', [id_meds]);
             if (medExists.rows.length === 0) {
-                return res.status(404).json({ error: 'Medicamento no encontrado' });
+                return res.status(StatusCodes.NOT_FOUND).json({ error: 'Medicamento no encontrado' });
             }
         }
         
@@ -101,13 +102,13 @@ export const updateMedication = async (req, res) => {
         `, [start, finish, frecuency, id_meds, id, userId]);
         
         if (result.rows.length === 0) {
-            return res.status(404).json({ error: 'Medicación no encontrada' });
+            return res.status(StatusCodes.NOT_FOUND).json({ error: 'Medicación no encontrada' });
         }
         
-        res.status(200).json(result.rows[0]);
+        res.status(StatusCodes.OK).json(result.rows[0]);
     } catch (err) {
         console.error('Error actualizando medicación:', err);
-        res.status(500).json({ error: 'Error interno del servidor' });
+    res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ error: getReasonPhrase(StatusCodes.INTERNAL_SERVER_ERROR) });
     }
 };
 
@@ -122,7 +123,7 @@ export const deleteMedication = async (req, res) => {
         );
 
         if (reminderCheck.rows.length > 0) {
-            return res.status(400).json({ 
+            return res.status(StatusCodes.BAD_REQUEST).json({ 
                 error: 'No se puede eliminar: hay recordatorios asociados a esta medicación' 
             });
         }
@@ -133,13 +134,13 @@ export const deleteMedication = async (req, res) => {
         );
         
         if (result.rows.length === 0) {
-            return res.status(404).json({ error: 'Medicación no encontrada' });
+            return res.status(StatusCodes.NOT_FOUND).json({ error: 'Medicación no encontrada' });
         }
         
-        res.status(200).json({ message: 'Medicación eliminada correctamente' });
+        res.status(StatusCodes.OK).json({ message: 'Medicación eliminada correctamente' });
     } catch (err) {
         console.error('Error eliminando medicación:', err);
-        res.status(500).json({ error: 'Error interno del servidor' });
+    res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ error: getReasonPhrase(StatusCodes.INTERNAL_SERVER_ERROR) });
     }
 };
 
@@ -159,12 +160,12 @@ export const getMedicationByIdWithUser = async (req, res) => {
     `, [id]);
 
         if (result.rows.length === 0) {
-            return res.status(404).json({ error: 'Medicación no encontrada' });
+            return res.status(StatusCodes.NOT_FOUND).json({ error: 'Medicación no encontrada' });
         }
 
-        res.status(200).json(result.rows[0]);
+    res.status(StatusCodes.OK).json(result.rows[0]);
     } catch (error) {
         console.error('Error al obtener medicación con usuario:', error);
-        res.status(500).json({ error: 'Error interno del servidor' });
+    res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ error: getReasonPhrase(StatusCodes.INTERNAL_SERVER_ERROR) });
     }
 };
