@@ -21,7 +21,7 @@
     "ngrokgusa": "cd C:/Users/USUARIO/Downloads && ngrok.exe update && ngrok.exe config add-authtoken 2z5cSKlqCgwX8boy391Uy9WSeK1_43RU4sW3jnw4G7DtGgJpp && ngrok.exe http --url=enhanced-obviously-panther.ngrok-free.app 3000 && cd C:/Users/USUARIO//OneDrive/Escritorio/Vitaband-Back"
   },
   "dependencies": {
-    "@supabase/supabase-js": "^2.50.0",
+    "@supabase/supabase-js": "^2.56.0",
     "bcryptjs": "^3.0.2",
     "cors": "^2.8.5",
     "dotenv": "^16.5.0",
