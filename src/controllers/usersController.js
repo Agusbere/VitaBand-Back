@@ -41,7 +41,6 @@ export const updateExtraData2 = async (req, res) => {
             return res.status(StatusCodes.BAD_REQUEST).json({ error: 'No se recibió el archivo. Usa el campo "image".' });
         }
 
-        // Subir imagen a Supabase Storage
         const ext = req.file.originalname.split('.').pop();
         const filePath = `users/${userId}/profile-picture.${ext}`;
         console.log('updateExtraData2: filePath', filePath);
@@ -58,12 +57,10 @@ export const updateExtraData2 = async (req, res) => {
             return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ error: 'Error subiendo imagen a Supabase' });
         }
         
-        // Obtener URL pública
         const { data } = supabase.storage.from('uploads').getPublicUrl(filePath);
         const publicUrl = data.publicUrl;
         console.log('updateExtraData2: publicUrl', publicUrl);
         
-        // Guardar URL en base de datos
         const result = await pool.query(
             `UPDATE users SET picture = $1 WHERE id = $2 RETURNING id, picture`,
             [publicUrl, userId]
@@ -91,7 +88,6 @@ export const uploadProfilePicture = async (req, res) => {
     console.log('uploadProfilePicture: filePath', filePath);
     
     try {
-        // Subir imagen a Supabase Storage
         const { error: uploadError } = await supabase.storage
             .from('uploads')
             .upload(filePath, req.file.buffer, { 
@@ -104,7 +100,6 @@ export const uploadProfilePicture = async (req, res) => {
             return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ error: 'Error subiendo imagen a Supabase' });
         }
         
-        // Obtener URL pública
         const { data } = supabase.storage.from('uploads').getPublicUrl(filePath);
         const publicUrl = data.publicUrl;
         console.log('uploadProfilePicture: publicUrl', publicUrl);
@@ -169,7 +164,6 @@ export const updateProfile = async (req, res) => {
         console.log('updateProfile: req.file:', req.file);
         console.log('updateProfile: req.body:', req.body);
         
-        // Si se envió una imagen, subirla a Supabase Storage
         if (req.file) {
             console.log('updateProfile: procesando imagen');
             const ext = req.file.originalname.split('.').pop();
@@ -192,7 +186,6 @@ export const updateProfile = async (req, res) => {
             console.log('updateProfile: nueva picture URL', picture);
         }
         
-        // Validar género si se proporciona
         if (id_gender) {
             const genderExists = await pool.query('SELECT id FROM gender WHERE id = $1', [id_gender]);
             if (genderExists.rows.length === 0) {
@@ -200,7 +193,6 @@ export const updateProfile = async (req, res) => {
             }
         }
         
-        // Actualizar perfil en base de datos
         const result = await pool.query(`
             UPDATE users 
             SET name = COALESCE($1, name), 
@@ -244,6 +236,75 @@ export const deleteProfile = async (req, res) => {
         res.status(200).json({ message: 'Cuenta eliminada correctamente' });
     } catch (err) {
         console.error('Error eliminando perfil:', err);
+        res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ error: getReasonPhrase(StatusCodes.INTERNAL_SERVER_ERROR) });
+    }
+};
+
+export const getProfilePictureUrl = async (req, res) => {
+    const userId = req.user.id;
+    try {
+        console.log('getProfilePictureUrl: inicio para userId', userId);
+        
+        const { data: files, error } = await supabase.storage
+            .from('uploads')
+            .list(`users/${userId}`, {
+                limit: 100,
+                offset: 0
+            });
+            
+        if (error) {
+            console.error('getProfilePictureUrl: error listando archivos', error);
+            return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ error: 'Error accediendo al storage' });
+        }
+        
+        console.log('getProfilePictureUrl: archivos encontrados', files);
+        
+        const profilePicture = files.find(file => file.name.startsWith('profile-picture'));
+        
+        if (!profilePicture) {
+            console.log('getProfilePictureUrl: no se encontró profile-picture');
+            return res.status(StatusCodes.NOT_FOUND).json({ error: 'Foto de perfil no encontrada' });
+        }
+        
+        const filePath = `users/${userId}/${profilePicture.name}`;
+        const { data } = supabase.storage.from('uploads').getPublicUrl(filePath);
+        
+        console.log('getProfilePictureUrl: URL pública generada', data.publicUrl);
+        res.status(StatusCodes.OK).json({ url: data.publicUrl });
+    } catch (err) {
+        console.error('getProfilePictureUrl: error', err);
+        res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ error: getReasonPhrase(StatusCodes.INTERNAL_SERVER_ERROR) });
+    }
+};
+
+export const updateProfilePictureUrl = async (req, res) => {
+    const userId = req.user.id;
+    try {
+        const { data: files, error } = await supabase.storage
+            .from('uploads')
+            .list(`users/${userId}`);
+            
+        if (error || !files) {
+            return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ error: 'Error accediendo al storage' });
+        }
+        
+        const profilePicture = files.find(file => file.name.startsWith('profile-picture'));
+        
+        if (!profilePicture) {
+            return res.status(StatusCodes.NOT_FOUND).json({ error: 'Foto de perfil no encontrada en storage' });
+        }
+        
+        const filePath = `users/${userId}/${profilePicture.name}`;
+        const { data } = supabase.storage.from('uploads').getPublicUrl(filePath);
+        const publicUrl = data.publicUrl;
+        
+        const result = await pool.query(
+            `UPDATE users SET picture = $1 WHERE id = $2 RETURNING id, picture`,
+            [publicUrl, userId]
+        );
+        
+        res.status(StatusCodes.OK).json(result.rows[0]);
+    } catch (err) {
         res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ error: getReasonPhrase(StatusCodes.INTERNAL_SERVER_ERROR) });
     }
 };
