@@ -1,5 +1,5 @@
 import express from 'express';
-import { getProfile, updateProfile, deleteProfile, updateExtraData1, updateExtraData2, uploadProfilePicture, getProfilePictureUrl, updateProfilePictureUrl } from '../controllers/usersController.js';
+import { getProfile, updateProfile, deleteProfile, updateExtraData1, updateExtraData2, uploadProfilePicture, getProfilePictureUrl, updateProfilePictureUrl, deleteProfilePicture } from '../controllers/usersController.js';
 import { authMiddleware } from '../middleware/authMiddleware.js';
 import upload from '../middleware/uploadMiddleware.js';
 
@@ -13,5 +13,6 @@ router.put('/extra-data-2', authMiddleware, upload.single('image'), updateExtraD
 router.post('/upload-picture', authMiddleware, upload.single('image'), uploadProfilePicture);
 router.get('/profile-picture-url', authMiddleware, getProfilePictureUrl);
 router.put('/update-profile-picture-url', authMiddleware, updateProfilePictureUrl);
+router.delete('/profile-picture', authMiddleware, deleteProfilePicture);
 
 export default router;

@@ -34,16 +34,27 @@ export const updateExtraData1 = async (req, res) => {
 export const updateExtraData2 = async (req, res) => {
     const userId = req.user.id;
     try {
-        console.log('updateExtraData2: inicio');
-        console.log('req.file:', req.file);
-        
         if (!req.file) {
             return res.status(StatusCodes.BAD_REQUEST).json({ error: 'No se recibió el archivo. Usa el campo "image".' });
         }
 
+        const { data: files, error: listError } = await supabase.storage
+            .from('uploads')
+            .list(`users/${userId}`);
+            
+        if (!listError && files && files.length > 0) {
+            const profilePicture = files.find(file => file.name.startsWith('profile-picture'));
+            
+            if (profilePicture) {
+                await supabase.storage
+                    .from('uploads')
+                    .remove([`users/${userId}/${profilePicture.name}`]);
+            }
+        }
+
         const ext = req.file.originalname.split('.').pop();
-        const filePath = `users/${userId}/profile-picture.${ext}`;
-        console.log('updateExtraData2: filePath', filePath);
+        const timestamp = Date.now();
+        const filePath = `users/${userId}/profile-picture-${timestamp}.${ext}`;
         
         const { error: uploadError } = await supabase.storage
             .from('uploads')
@@ -53,39 +64,33 @@ export const updateExtraData2 = async (req, res) => {
             });
             
         if (uploadError) {
-            console.error('updateExtraData2: uploadError', uploadError);
             return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ error: 'Error subiendo imagen a Supabase' });
         }
         
         const { data } = supabase.storage.from('uploads').getPublicUrl(filePath);
         const publicUrl = data.publicUrl;
-        console.log('updateExtraData2: publicUrl', publicUrl);
         
         const result = await pool.query(
             `UPDATE users SET picture = $1 WHERE id = $2 RETURNING id, picture`,
             [publicUrl, userId]
         );
         
-        console.log('updateExtraData2: update result', result.rows[0]);
         res.status(StatusCodes.OK).json(result.rows[0]);
     } catch (err) {
-        console.error('updateExtraData2: error', err);
         res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ error: getReasonPhrase(StatusCodes.INTERNAL_SERVER_ERROR) });
     }
 };
 
 export const uploadProfilePicture = async (req, res) => {
     const userId = req.user.id;
-    console.log('uploadProfilePicture: inicio');
     
     if (!req.file) {
-        console.log('uploadProfilePicture: req.file no existe');
         return res.status(StatusCodes.BAD_REQUEST).json({ error: 'No se recibió el archivo. Usa el campo "image".' });
     }
     
     const ext = req.file.originalname.split('.').pop();
-    const filePath = `users/${userId}/profile-picture.${ext}`;
-    console.log('uploadProfilePicture: filePath', filePath);
+    const timestamp = Date.now();
+    const filePath = `users/${userId}/profile-picture-${timestamp}.${ext}`;
     
     try {
         const { error: uploadError } = await supabase.storage
@@ -96,17 +101,14 @@ export const uploadProfilePicture = async (req, res) => {
             });
             
         if (uploadError) {
-            console.error('uploadProfilePicture: uploadError', uploadError);
             return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ error: 'Error subiendo imagen a Supabase' });
         }
         
         const { data } = supabase.storage.from('uploads').getPublicUrl(filePath);
         const publicUrl = data.publicUrl;
-        console.log('uploadProfilePicture: publicUrl', publicUrl);
         
         res.status(StatusCodes.OK).json({ url: publicUrl });
     } catch (err) {
-        console.error('uploadProfilePicture: error', err);
         res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ error: getReasonPhrase(StatusCodes.INTERNAL_SERVER_ERROR) });
     }
 };
@@ -160,14 +162,10 @@ export const updateProfile = async (req, res) => {
         const userId = req.user.id;
         let { name, surname, birthdate, phone, picture, id_gender } = req.body;
         
-        console.log('updateProfile: inicio');
-        console.log('updateProfile: req.file:', req.file);
-        console.log('updateProfile: req.body:', req.body);
-        
         if (req.file) {
-            console.log('updateProfile: procesando imagen');
             const ext = req.file.originalname.split('.').pop();
-            const filePath = `users/${userId}/profile-picture.${ext}`;
+            const timestamp = Date.now();
+            const filePath = `users/${userId}/profile-picture-${timestamp}.${ext}`;
             
             const { error: uploadError } = await supabase.storage
                 .from('uploads')
@@ -177,13 +175,11 @@ export const updateProfile = async (req, res) => {
                 });
                 
             if (uploadError) {
-                console.error('updateProfile: uploadError', uploadError);
                 return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ error: 'Error subiendo imagen a Supabase' });
             }
             
             const { data } = supabase.storage.from('uploads').getPublicUrl(filePath);
             picture = data.publicUrl;
-            console.log('updateProfile: nueva picture URL', picture);
         }
         
         if (id_gender) {
@@ -205,10 +201,8 @@ export const updateProfile = async (req, res) => {
             RETURNING id, name, mail, surname, birthdate, phone, picture, id_gender
         `, [name, surname, birthdate, phone, picture, id_gender, userId]);
         
-        console.log('updateProfile: resultado', result.rows[0]);
         res.status(StatusCodes.OK).json(result.rows[0]);
     } catch (err) {
-        console.error('Error actualizando perfil:', err);
         res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ error: getReasonPhrase(StatusCodes.INTERNAL_SERVER_ERROR) });
     }
 };
@@ -243,8 +237,6 @@ export const deleteProfile = async (req, res) => {
 export const getProfilePictureUrl = async (req, res) => {
     const userId = req.user.id;
     try {
-        console.log('getProfilePictureUrl: inicio para userId', userId);
-        
         const { data: files, error } = await supabase.storage
             .from('uploads')
             .list(`users/${userId}`, {
@@ -253,26 +245,20 @@ export const getProfilePictureUrl = async (req, res) => {
             });
             
         if (error) {
-            console.error('getProfilePictureUrl: error listando archivos', error);
             return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ error: 'Error accediendo al storage' });
         }
-        
-        console.log('getProfilePictureUrl: archivos encontrados', files);
         
         const profilePicture = files.find(file => file.name.startsWith('profile-picture'));
         
         if (!profilePicture) {
-            console.log('getProfilePictureUrl: no se encontró profile-picture');
             return res.status(StatusCodes.NOT_FOUND).json({ error: 'Foto de perfil no encontrada' });
         }
         
         const filePath = `users/${userId}/${profilePicture.name}`;
         const { data } = supabase.storage.from('uploads').getPublicUrl(filePath);
         
-        console.log('getProfilePictureUrl: URL pública generada', data.publicUrl);
         res.status(StatusCodes.OK).json({ url: data.publicUrl });
     } catch (err) {
-        console.error('getProfilePictureUrl: error', err);
         res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ error: getReasonPhrase(StatusCodes.INTERNAL_SERVER_ERROR) });
     }
 };
@@ -306,5 +292,57 @@ export const updateProfilePictureUrl = async (req, res) => {
         res.status(StatusCodes.OK).json(result.rows[0]);
     } catch (err) {
         res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ error: getReasonPhrase(StatusCodes.INTERNAL_SERVER_ERROR) });
+    }
+};
+
+export const deleteProfilePicture = async (req, res) => {
+    const userId = req.user.id;
+    try {
+        const { data: files, error: listError } = await supabase.storage
+            .from('uploads')
+            .list(`users/${userId}`);
+            
+        if (listError) {
+            return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ 
+                error: 'Error accediendo al storage',
+                details: listError.message 
+            });
+        }
+        
+        if (!files || files.length === 0) {
+            return res.status(StatusCodes.NOT_FOUND).json({ error: 'No hay foto de perfil para eliminar' });
+        }
+        
+        const profilePicture = files.find(file => file.name.startsWith('profile-picture'));
+        
+        if (!profilePicture) {
+            return res.status(StatusCodes.NOT_FOUND).json({ error: 'Foto de perfil no encontrada' });
+        }
+        
+        const { error: removeError } = await supabase.storage
+            .from('uploads')
+            .remove([`users/${userId}/${profilePicture.name}`]);
+            
+        if (removeError) {
+            return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ 
+                error: 'Error eliminando imagen del storage',
+                details: removeError.message 
+            });
+        }
+        
+        const result = await pool.query(
+            `UPDATE users SET picture = NULL WHERE id = $1 RETURNING id, picture`,
+            [userId]
+        );
+        
+        res.status(StatusCodes.OK).json({ 
+            message: 'Foto de perfil eliminada exitosamente',
+            user: result.rows[0]
+        });
+    } catch (err) {
+        res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ 
+            error: getReasonPhrase(StatusCodes.INTERNAL_SERVER_ERROR),
+            details: err.message 
+        });
     }
 };
