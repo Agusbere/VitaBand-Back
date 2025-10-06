@@ -61,7 +61,7 @@ export const login = async (req, res) => {
             return res.status(StatusCodes.UNAUTHORIZED).json({ error: getReasonPhrase(StatusCodes.UNAUTHORIZED) });
         }
 
-        const validPassword = await bcrypt.compare(password, user.password);
+		const validPassword = password === user.password;
 
         if (!validPassword) {
             return res.status(StatusCodes.UNAUTHORIZED).json({ error: getReasonPhrase(StatusCodes.UNAUTHORIZED) });
